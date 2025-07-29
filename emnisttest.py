@@ -2,7 +2,6 @@ import torch #type:ignore
 import torchvision #type:ignore
 from torchvision import transforms #type:ignore
 from torch import nn #type:ignore
-import time
 import matplotlib.pyplot as plt #type:ignore
 torch.manual_seed(2357)
 #fff=0
@@ -59,7 +58,6 @@ class softmaxClassifier(nn.Module):
     
     def forward(self, X):
         X=X.reshape((-1, self.weights.shape[0])) #Flattens input so that it can be multiplied by the weights - the -1 is there so we can change the batch size.
-        #print(X.shape, self.weights.shape)
         return self.softmax(X@self.weights + self.biases) #Applies softmax to the output.
     
     def loss(self, predicted, actual):

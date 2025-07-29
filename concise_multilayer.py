@@ -2,9 +2,9 @@ import torch #type:ignore
 import torchvision #type:ignore
 from torchvision import transforms #type:ignore
 from torch import nn #type:ignore
+import time
 import matplotlib.pyplot as plt #type:ignore
 torch.manual_seed(2357)
-#fff=0
 
 storage="Datasets"
 class EMNIST(): 
@@ -37,45 +37,28 @@ class EMNIST():
 
         return torch.utils.data.DataLoader(used_data, self.batch_size, shuffle=train, num_workers=num_workers) #Shuffles dataset if training, otherwise not. 
 
-def relu(X): #Creates rectified linear activation function.
-    a = torch.zeros_like(X)
-    return torch.max(X, a)
 
-class softmaxClassifier(nn.Module):
-    def __init__(self, num_inputs=784, hidden_dim=128, num_outputs=62, lr=.01, sigma=.03):
+class Softmaxer(nn.Module):
+    def __init__(self, num_inputs=784,hidden_dim=128, num_outputs=62, lr=.01):
         super().__init__()
-        self.num_inputs=num_inputs #Here, number of pixels.
-        self.num_outputs=num_outputs #Here, number of digits
+        self.num_inputs=num_inputs
+        self.num_outputs=num_outputs
+        self.lr=lr
 
-        self.lr=lr #Learning rate
-        self.sigma=sigma #Std dev on torch rng 
+        self.net = nn.Sequential(nn.Flatten(), nn.LazyLinear(hidden_dim), nn.ReLU, nn.LazyLinear(num_outputs)) #Flattens input layer then creates a linear connection between inputs and outputs.
 
-        self.weights = torch.normal(0, sigma, size=(num_inputs, hidden_dim), requires_grad=True)#Sets up weights
-        self.biases=torch.normal(0, sigma, size=(hidden_dim,), requires_grad=True) #Sets up biases
-        self.weights2 = torch.normal(0, sigma, size=(hidden_dim, num_outputs), requires_grad=True)#Sets up hidden layer weights
-        self.biases2=torch.normal(0, sigma, size=(num_outputs,), requires_grad=True) #Sets up biases for hidden layer
-        
-        self.loss_func=nn.NLLLoss() #Using NLLLoss, as cross-entropy loss in pytorch does softmax automatically on the input logits..
-        self.softmax=nn.LogSoftmax(dim=1)#NLLLoss expects log probabilities, so - the softmax needs to be logged.
-
-    def parameters(self):
-        return [self.weights, self.biases, self.weights2, self.biases2]
-    
     def forward(self, X):
-        X=X.reshape((-1, self.weights.shape[0])) #Flattens input so that it can be multiplied by the weights - the -1 is there so we can change the batch size.
-        return self.softmax(relu(X@self.weights + self.biases)@self.weights2+self.biases2)
-    
+        return self.net(X) #Outputs forward by using the net defined in init.
+
     def loss(self, predicted, actual):
-        k=self.loss_func(predicted, actual) #Plugs the predicted and actual values into the loss function.
-        return k
-        #Aka -torch.log(predicted[list(range(len(predicted))),actual]).mean(). This finds the correctly labeled probability, combines them, and then takes the mean. 
+        return nn.functional.cross_entropy(predicted, actual, reduction='mean') #Makes sure we're only moving according to the mean of the batches.
     
     def training_step(self, data):
         inputs, labels=data 
-        return self.loss(self.forward(inputs), labels)#
-    
+        return self.loss(self.forward(inputs), labels)#Calculates loss based on inputs
+
     def optimizers(self):
-        return torch.optim.SGD(self.parameters(), self.lr)
+        return torch.optim.SGD(self.parameters(), self.lr) #Finds the gradient and multiplies it by the learning rate.
     
 class Trainer:
     def __init__(self, model, data, max_epochs=6):
@@ -85,12 +68,12 @@ class Trainer:
         self.max_epochs=max_epochs #Max number of iterations to go through
         self.train_batch_id=0
         
-    def fit(self,num_data=1000):
+    def fit(self):
         for self.epoch in range(self.max_epochs):
             print(f"On epoch {self.epoch}")
-            self.fit_epoch(num_data)
+            self.fit_epoch()
 
-    def fit_epoch(self, num_data):#TODO - num_data isn't being used here - it might be beneficial to figure out a way to only take like 10000 samples from the dataloader at a time. Maybe not though.
+    def fit_epoch(self):#TODO - num_data isn't being used here - it might be beneficial to figure out a way to only take like 10000 samples from the dataloader at a time. Maybe not though.
         self.model.train()#Enables training on our model (Part of nn.Module's functionalities)
         for batch in self.data: #DO NOT change this into a "for i in range" thing - it makes the code like 3x slower.
             loss=self.model.training_step(batch) #Find the mean loss from the batch
@@ -99,12 +82,12 @@ class Trainer:
             self.optim.step()
             self.train_batch_id+=1
 
-model=softmaxClassifier()
+
+model=Softmaxer()
 data=EMNIST()
 training_data=data.get_dataloader(train=True, num_workers=0)#Lol the more cores I use the slower it gets - 0 cores gave me a time of 2.6 seconds for 50, while 2 gave me 5.6.
 trainer = Trainer(model, training_data)
 trainer.fit()
-
 
 #Grapher
 model.eval()
@@ -120,11 +103,9 @@ for i in range(64):
     actual_label=actual_labels[i]
     pred_label=pred_labels[i]
     ax=axes[i//8,i%8]
-    ax.imshow(picture.squeeze(), cmap='gray')
+    ax.imshow(picture.squeeze(), cmap='gray')#Removes the extra color channel - there's only one here cause it's gray.
     ax.axis('off')
     ax.set_title(str((pred_label, actual_label)))
 
 fig.tight_layout()
-fig.savefig("EMNISTTest.png")
-
-
+fig.savefig("ConciseMultilayerTest.png")
