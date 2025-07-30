@@ -42,9 +42,8 @@ class LinearRegressor(nn.Module):
        return self.loss(self.forward(inputs), labels)
 
     def optimizers(self):
-        return torch.optim.SGD(self.parameters(), self.lr, weight_decay=.0001) #Stochastic gradient descent. self.parameters() gives us the parameters of the net.
-        #Weight decay term here creates incentive for parameters to go to 0.
-
+        return torch.optim.SGD(self.parameters(), self.lr) #Stochastic gradient descent. self.parameters() gives us the parameters of the net.
+    
 class Trainer:
     def __init__(self, model, data, max_epochs=100):
         self.model=model 
