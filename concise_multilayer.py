@@ -58,7 +58,7 @@ class Softmaxer(nn.Module):
         return self.loss(self.forward(inputs), labels)#Calculates loss based on inputs
 
     def optimizers(self):
-        return torch.optim.SGD(self.parameters(), self.lr) #Finds the gradient and multiplies it by the learning rate.
+        return torch.optim.SGD(self.parameters(), self.lr, weight_decay=self.lr/10) #Finds the gradient and multiplies it by the learning rate.
     
 class Trainer:
     def __init__(self, model, data, max_epochs=6):
