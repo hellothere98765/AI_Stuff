@@ -45,7 +45,7 @@ class Softmaxer(nn.Module):
         self.num_outputs=num_outputs
         self.lr=lr
 
-        self.net = nn.Sequential(nn.Flatten(), nn.LazyLinear(hidden_dim), nn.ReLU(), nn.LazyLinear(num_outputs)) #Flattens input layer then creates a linear connection between inputs and outputs.
+        self.net = nn.Sequential(nn.Flatten(), nn.LazyLinear(hidden_dim), nn.nn.ReLU(), nn.Dropout(.2), nn.LazyLinear(num_outputs)) #Flattens input layer then creates a linear connection between inputs and outputs.
 
     def forward(self, X):
         return self.net(X) #Outputs forward by using the net defined in init.
